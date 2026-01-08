@@ -3,12 +3,13 @@ pipeline {
 
     options {
         timestamps()
+        disableConcurrentBuilds()   // extra safety
     }
 
     environment {
-        AWS_REGION  = "us-west-2"
-        ZIP_NAME    = "lambda.zip"
-        BASE_LAMBDA = "readuser"
+        AWS_REGION   = "us-west-2"
+        LAMBDA_NAME  = "readuser"        // SINGLE lambda
+        ZIP_NAME     = "lambda.zip"
     }
 
     stages {
@@ -18,7 +19,7 @@ pipeline {
            ========================= */
         stage('Checkout') {
             steps {
-                echo "Checking out branch: ${BRANCH_NAME}"
+                echo "📥 Checking out branch: ${env.BRANCH_NAME}"
                 checkout scm
             }
         }
@@ -28,19 +29,17 @@ pipeline {
            ========================= */
         stage('Build') {
             steps {
-                echo "Building code for ${BRANCH_NAME}"
-                sh '''
-                  node -v || echo "Node not required"
-                '''
+                echo "🔧 Building branch: ${env.BRANCH_NAME}"
+                sh 'node -v || echo "Node not required"'
             }
         }
 
         /* =========================
            PACKAGE
            ========================= */
-        stage('Package Lambda') {
+        stage('Package') {
             steps {
-                echo "Packaging Lambda for ${BRANCH_NAME}"
+                echo "📦 Packaging Lambda for ${env.BRANCH_NAME}"
                 sh '''
                   rm -f lambda.zip
                   zip -r lambda.zip .
@@ -49,35 +48,34 @@ pipeline {
         }
 
         /* =========================
-           DEPLOY (ALL BRANCHES)
+           DEPLOY (MANUAL, ONE BRANCH)
            ========================= */
         stage('Deploy to Lambda') {
             steps {
-                script {
-                    def lambdaName = "${BASE_LAMBDA}"
+                lock(resource: 'lambda-deploy-lock') {
 
-                    echo "Deploying to Lambda: ${lambdaName}"
+                    echo "🚀 Deploying SELECTED branch: ${env.BRANCH_NAME}"
+                    echo "🔒 Lock acquired (only one branch can deploy)"
 
                     sh """
                       aws lambda update-function-code \
-                        --function-name ${lambdaName} \
+                        --function-name ${LAMBDA_NAME} \
                         --region ${AWS_REGION} \
                         --zip-file fileb://${ZIP_NAME}
                     """
+
+                    echo "✅ Deployment completed for ${env.BRANCH_NAME}"
                 }
             }
         }
     }
 
-    /* =========================
-       POST
-       ========================= */
     post {
         success {
-            echo "Deployment SUCCESS for branch: ${BRANCH_NAME}"
+            echo "🎉 SUCCESS: ${env.BRANCH_NAME} deployed to Lambda"
         }
         failure {
-            echo "Deployment FAILED for branch: ${BRANCH_NAME}"
+            echo "❌ FAILED: ${env.BRANCH_NAME} deployment failed"
         }
         always {
             sh 'rm -f lambda.zip'
