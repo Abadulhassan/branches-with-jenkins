@@ -3,12 +3,12 @@ pipeline {
 
     options {
         timestamps()
-        disableConcurrentBuilds()   // prevents parallel deploys
+        disableConcurrentBuilds()
     }
 
     environment {
         AWS_REGION  = "us-west-2"
-        LAMBDA_NAME = "readuser"     // SINGLE lambda
+        LAMBDA_NAME = "readuser"
         ZIP_NAME    = "lambda.zip"
     }
 
@@ -21,26 +21,19 @@ pipeline {
             }
         }
 
-        stage('Build') {
+        stage('Package Lambda') {
             steps {
-                echo "🔧 Building branch: ${env.BRANCH_NAME}"
-                sh 'node -v || echo "Node not required"'
-            }
-        }
-
-        stage('Package') {
-            steps {
-                echo "📦 Packaging Lambda for ${env.BRANCH_NAME}"
+                echo "📦 Packaging for branch: ${env.BRANCH_NAME}"
                 sh '''
                   rm -f lambda.zip
-                  zip -r lambda.zip index.js package.json 2>/dev/null || zip -r lambda.zip .
+                  zip -r lambda.zip index.js Jenkinsfile
                 '''
             }
         }
 
         stage('Deploy to Lambda') {
             steps {
-                echo "🚀 Deploying SELECTED branch: ${env.BRANCH_NAME}"
+                echo "🚀 DEPLOYING branch: ${env.BRANCH_NAME}"
 
                 sh """
                   aws lambda update-function-code \
@@ -54,10 +47,10 @@ pipeline {
 
     post {
         success {
-            echo "✅ SUCCESS: ${env.BRANCH_NAME} deployed"
+            echo "✅ DEPLOY COMPLETED for branch: ${env.BRANCH_NAME}"
         }
         failure {
-            echo "❌ FAILED: ${env.BRANCH_NAME} deployment failed"
+            echo "❌ DEPLOY FAILED for branch: ${env.BRANCH_NAME}"
         }
         always {
             sh 'rm -f lambda.zip'
