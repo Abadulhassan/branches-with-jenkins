@@ -2,7 +2,7 @@ exports.handler = async (event) => {
     console.log("Incoming event:", JSON.stringify(event));
 
     const response = {
-        message: "Hello from AWS Lambda!",
+        message: "Hello from AWS Lambda! this code is for hotfix",
         input: event
     };
 
