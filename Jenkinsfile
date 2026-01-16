@@ -54,7 +54,7 @@ pipeline {
         stage('Deploy to Lambda') {
             steps {
                 script {
-                    def lambdaName = "${BASE_LAMBDA}-${BRANCH_NAME}"
+                    def lambdaName = "${BASE_LAMBDA}"
 
                     echo "Deploying to Lambda: ${lambdaName}"
 
