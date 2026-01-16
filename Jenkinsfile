@@ -8,39 +8,30 @@ pipeline {
     environment {
         AWS_REGION  = "us-west-2"
         ZIP_NAME    = "lambda.zip"
-        BASE_LAMBDA = "readuser"
+        LAMBDA_NAME = "readuser"  // Same for all branches
     }
 
     stages {
 
-        /* =========================
-           CHECKOUT
-           ========================= */
         stage('Checkout') {
             steps {
-                echo "Checking out branch: ${BRANCH_NAME}"
+                echo "Checking out branch: ${env.BRANCH_NAME}"
                 checkout scm
             }
         }
 
-        /* =========================
-           BUILD
-           ========================= */
         stage('Build') {
             steps {
-                echo "Building code for ${BRANCH_NAME}"
+                echo "Building code for ${env.BRANCH_NAME}"
                 sh '''
                   node -v || echo "Node not required"
                 '''
             }
         }
 
-        /* =========================
-           PACKAGE
-           ========================= */
         stage('Package Lambda') {
             steps {
-                echo "Packaging Lambda for ${BRANCH_NAME}"
+                echo "Packaging Lambda for ${env.BRANCH_NAME}"
                 sh '''
                   rm -f lambda.zip
                   zip -r lambda.zip .
@@ -48,36 +39,25 @@ pipeline {
             }
         }
 
-        /* =========================
-           DEPLOY (ALL BRANCHES)
-           ========================= */
         stage('Deploy to Lambda') {
             steps {
-                script {
-                    def lambdaName = "${BASE_LAMBDA}"
-
-                    echo "Deploying to Lambda: ${lambdaName}"
-
-                    sh """
-                      aws lambda update-function-code \
-                        --function-name ${lambdaName} \
-                        --region ${AWS_REGION} \
-                        --zip-file fileb://${ZIP_NAME}
-                    """
-                }
+                echo "Deploying branch '${env.BRANCH_NAME}' to Lambda: ${LAMBDA_NAME}"
+                sh """
+                  aws lambda update-function-code \
+                    --function-name ${LAMBDA_NAME} \
+                    --region ${AWS_REGION} \
+                    --zip-file fileb://${ZIP_NAME}
+                """
             }
         }
     }
 
-    /* =========================
-       POST
-       ========================= */
     post {
         success {
-            echo "Deployment SUCCESS for branch: ${BRANCH_NAME}"
+            echo "Deployment SUCCESS for branch: ${env.BRANCH_NAME}"
         }
         failure {
-            echo "Deployment FAILED for branch: ${BRANCH_NAME}"
+            echo "Deployment FAILED for branch: ${env.BRANCH_NAME}"
         }
         always {
             sh 'rm -f lambda.zip'
