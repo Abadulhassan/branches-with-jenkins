@@ -9,7 +9,7 @@ exports.handler = async (event) => {
     return {
         statusCode: 200,
         headers: {
-            "Content-Type": "application/json tayyab deployed thisvia jenkins "
+            "Content-Type": "this code is from main branch "
         },
         body: JSON.stringify(response)
     };
